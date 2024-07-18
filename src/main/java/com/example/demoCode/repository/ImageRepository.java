@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ImageRepository extends JpaRepository<Images, Integer> {
+public interface ImageRepository extends JpaRepository<Images, Long> {
 }
