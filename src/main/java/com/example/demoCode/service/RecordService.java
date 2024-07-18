@@ -41,7 +41,7 @@ public class RecordService {
         File directory = new File(directoryPath);
 
         if (directory.exists() && directory.isDirectory()) {
-            File[] files = directory.listFiles((dir, name) -> name.endsWith(".mp3"));
+            File[] files = directory.listFiles((_, name) -> name.endsWith(".mp3"));
 
             if (files != null) {
                 for (File file : files) {
@@ -49,7 +49,6 @@ public class RecordService {
                 }
             }
         }
-
         return recordNames;
     }
 

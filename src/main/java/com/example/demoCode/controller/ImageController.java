@@ -38,7 +38,6 @@ public class ImageController {
     }
 
 
-
     @GetMapping("/ImageById/{id}")
     public ResponseEntity<?> getImage(@PathVariable Long id) {
         try {
@@ -54,6 +53,39 @@ public class ImageController {
             }
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving image");
+        }
+    }
+
+
+    @GetMapping("/ImageList")
+    public ResponseEntity<List<String>> getAllImageNames() {
+        List<String> imageNames = imageService.getAllImageNames("src/main/resources/static/images");
+
+        if (imageNames != null && !imageNames.isEmpty()) {
+            return ResponseEntity.ok(imageNames);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+
+    @GetMapping("/File/{fileName}")
+    public ResponseEntity<?> getImageByName(@PathVariable String fileName) {
+        try {
+            byte[] recordData = imageService.getImageByName("src/main/resources/static/images",
+                    fileName);
+
+            if (recordData != null) {
+                var resource = new ByteArrayResource(recordData);
+                HttpHeaders headers = new HttpHeaders();
+                headers.add(HttpHeaders.CONTENT_TYPE, "image/jpeg");
+                return ResponseEntity.ok().headers(headers).body(resource);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Record not found");
+            }
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Server error: " + e.getMessage());
         }
     }
 }
