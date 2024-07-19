@@ -2,3 +2,10 @@ server:
   port: 8080
   servlet:
     context-path: /demo
+
+
+
+telegram:
+  bot:
+    username: Demo060606Bot
+    token: 6925921843:AAFPdWv_Y41NqoGxQ9v6v3ket2Qf0xgCD_I

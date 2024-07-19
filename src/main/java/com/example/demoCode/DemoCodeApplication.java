@@ -29,7 +29,9 @@ public class DemoCodeApplication implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        try {
+
+
+       try {
             ObjectMapper objectMapper = new ObjectMapper();
             DataInfo dataInfo = objectMapper.readValue(new File
                             ("src\\main\\java\\com\\example\\demoCode\\info.json")
