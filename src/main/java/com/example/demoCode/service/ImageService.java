@@ -2,6 +2,7 @@ package com.example.demoCode.service;
 
 import com.example.demoCode.entity.Images;
 import com.example.demoCode.repository.ImageRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,10 +19,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final   ImageRepository imageRepository;
+    private final ImageRepository imageRepository;
 
 
     public List<Images> getAllImageNames() {
         return imageRepository.findAll();
+    }
+
+    public List<Images> getRandomImages() {
+        return imageRepository.findRandomImages();
     }
 }

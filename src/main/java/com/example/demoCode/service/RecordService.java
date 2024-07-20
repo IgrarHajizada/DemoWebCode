@@ -1,5 +1,6 @@
 package com.example.demoCode.service;
 
+import com.example.demoCode.entity.Images;
 import com.example.demoCode.entity.Records;
 import com.example.demoCode.repository.RecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,5 +22,9 @@ public class RecordService {
 
     public List<Records> getAllRecordNames() {
         return recordRepository.findAll();
+    }
+
+    public List<Records> getRandomRecords() {
+        return recordRepository.findRandomRecords();
     }
 }

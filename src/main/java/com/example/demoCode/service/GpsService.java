@@ -18,4 +18,8 @@ public class GpsService {
         return gpsInfoRepository.findAll();
     }
 
+    public List<GPSInfo> getRandomGps() {
+        return gpsInfoRepository.findRandomGpsInfo();
+    }
+
 }
