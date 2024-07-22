@@ -21,4 +21,5 @@ public class ContactsService {
     public List<Contacts> getRandomContacts() {
         return contactRepository.findRandomContacts();
     }
+
 }

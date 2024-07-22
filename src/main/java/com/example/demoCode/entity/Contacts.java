@@ -18,8 +18,7 @@ import java.util.List;
 public class Contacts {
     @Id
     private Long id;
-    @JsonProperty("time_modified")
-    private Long timeModified;
+    private Long time_Modified;
     private String name;
     private String numbers;
 }

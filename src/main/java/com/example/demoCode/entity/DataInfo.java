@@ -10,7 +10,7 @@ import java.util.List;
 public class DataInfo {
     private List<ReqContact> contacts;
     private List<Images> images;
-    @JsonProperty("gps_info")
-    private List<GPSInfo> gpsInfo;
+
+    private List<GPSInfo> gps_info;
     private List<Records> records;
 }
